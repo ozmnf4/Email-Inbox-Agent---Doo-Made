@@ -444,49 +444,39 @@ def run_triage_and_print(max_results: int = 10) -> list[dict[str, Any]]:
             }
         )
 
-        # Determine destination folder name from topic category
-        folder_name = target_folder if target_folder else topic_map.get(category, "")
-        if not folder_name and action == "ARCHIVE":
-            folder_name = "Archive"
-
-        # Move every email into its topic folder (remove from INBOX)
-        if action == "MOVE_TO_FOLDER":
-            if target_folder:
-                try:
-                    from app.gmail_client import move_to_label
-                    move_to_label(email_id, target_folder)
-                    LOGGER.info("Moved email %s to folder '%s'", email_id, target_folder)
-                except Exception as exc:
-                    LOGGER.warning("Failed to move email %s to '%s': %s", email_id, target_folder, exc)
-            elif folder_name:
-                try:
-                    from app.gmail_client import move_to_label
-                    move_to_label(email_id, folder_name)
-                    LOGGER.info("Moved email %s to folder '%s'", email_id, folder_name)
-                except Exception as exc:
-                    LOGGER.warning("Failed to move email %s to '%s': %s", email_id, folder_name, exc)
-        elif action == "ARCHIVE":
+        # Execute actions: ARCHIVE or MOVE_TO_FOLDER
+        if action == "ARCHIVE":
             try:
                 from app.gmail_client import archive_email
                 archive_email(email_id)
                 LOGGER.info("Archived email %s", email_id)
             except Exception as exc:
                 LOGGER.warning("Failed to archive email %s: %s", email_id, exc)
-        elif folder_name:
+        elif action == "MOVE_TO_FOLDER" and target_folder:
             try:
                 from app.gmail_client import move_to_label
-                move_to_label(email_id, folder_name)
-                LOGGER.info("Moved email %s to folder '%s'", email_id, folder_name)
+                move_to_label(email_id, target_folder)
+                LOGGER.info("Moved email %s to folder '%s'", email_id, target_folder)
             except Exception as exc:
-                LOGGER.warning("Failed to move email %s to '%s': %s", email_id, folder_name, exc)
+                LOGGER.warning("Failed to move email %s to '%s': %s", email_id, target_folder, exc)
 
-        if action == "REPLY":
+        if config.category_labeling_enabled and action not in ("ARCHIVE", "MOVE_TO_FOLDER"):
             try:
-                add_label_to_message(email_id, config.label_action_required)
+                apply_action_label(
+                    message_id=email_id,
+                    target_label_name=topic_map[category],
+                    all_action_label_names=managed_topic_labels,
+                )
+                if action == "REPLY":
+                    add_label_to_message(email_id, config.label_action_required)
+                else:
+                    remove_label_from_message(email_id, config.label_action_required)
             except Exception as exc:
                 LOGGER.warning(
-                    "Failed to add Action Required label for message id=%s: %s",
+                    "Labeling failed for message id=%s category=%s action=%s: %s",
                     email_id,
+                    category,
+                    action,
                     exc,
                 )
 

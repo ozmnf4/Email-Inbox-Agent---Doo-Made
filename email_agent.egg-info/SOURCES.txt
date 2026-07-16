@@ -1,0 +1,16 @@
+README.md
+pyproject.toml
+app/__init__.py
+app/agents.py
+app/cleanup_labels.py
+app/config.py
+app/gmail_client.py
+app/main.py
+app/setup_wizard.py
+app/tools.py
+app/workflows.py
+email_agent.egg-info/PKG-INFO
+email_agent.egg-info/SOURCES.txt
+email_agent.egg-info/dependency_links.txt
+email_agent.egg-info/requires.txt
+email_agent.egg-info/top_level.txt
